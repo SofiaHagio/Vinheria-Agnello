@@ -186,7 +186,7 @@ float umidMin = 50.0;
 float umidMax = 70.0;
 ```
 
-Use o Monitor Serial para verificar os valores brutos dos sensores no seu ambiente e calibre conforme necessário.
+>Use o Monitor Serial para verificar os valores brutos dos sensores no seu ambiente e calibre conforme necessário.
 
 ---
 
