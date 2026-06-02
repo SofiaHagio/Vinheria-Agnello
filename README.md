@@ -11,7 +11,7 @@ O vinho é sensível a três fatores ambientais principais: **luminosidade**, **
 
 Este sistema monitora continuamente esses três fatores e responde de forma automática, exibindo os valores em um display LCD e acionando LEDs e buzzer conforme os níveis detectados.
 
-> Os valores exibidos no display são a **média de 5 leituras consecutivas**, atualizados a cada **5 segundos**.
+> Os valores exibidos no display são a média de 5 leituras consecutivas, atualizados a cada 5 segundos.
 
 ---
 
@@ -194,11 +194,11 @@ Use o Monitor Serial para verificar os valores brutos dos sensores no seu ambien
 
 ```
 Vinheria-Agnello/
-├── circuito-01       ← Código-fonte do sistema luminosidade (primiero circuito)
-├── circuito-02       ← Código-fonte do sistema ambiental (segundo circuito)
-├── circuito-01.png   ← Imagem do circuito luminosidade
-├── circuito-02.jpg   ← Imagem do circuito ambiental
-└── README.md         ← Este arquivo
+├── circuito-01 ← Código-fonte do sistema luminosidade (primiero circuito)
+├── circuito-02 ← Código-fonte do sistema ambiental (segundo circuito)
+├── circuito-01.png ← Imagem do circuito luminosidade
+├── circuito-02.jpg ← Imagem do circuito ambiental
+└── README.md ← Este arquivo
 ```
 
 ---
