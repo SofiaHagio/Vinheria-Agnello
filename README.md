@@ -1,213 +1,219 @@
-# 🍷 Vinheria Agnello — Sistema de Monitoramento de Luminosidade
+<div align="center">
 
-> Projeto desenvolvido como parte da disciplina de Edge Computing & Computer Systems.  
-> Utiliza Arduino Uno com sensor LDR, sensor DHT11 e display LCD 16x2 para monitorar luminosidade, temperatura e umidade do ambiente de armazenamento de vinhos, acionando alertas visuais e sonoros em tempo real.
+# Vinheria Agnello
+
+**Monitoramento ambiental da adega, do Arduino à nuvem**
+
+Sistema que acompanha luminosidade, temperatura e umidade do local onde os vinhos ficam guardados e avisa em tempo real quando algum desses fatores sai da faixa ideal. O projeto evolui em três versões, de um circuito com um único sensor até uma solução IoT conectada ao FIWARE na AWS.
+
+![Arduino](https://img.shields.io/badge/Arduino-00878F?style=flat-square&logo=arduino&logoColor=white)
+![ESP32](https://img.shields.io/badge/ESP32-E7352C?style=flat-square&logo=espressif&logoColor=white)
+![C++](https://img.shields.io/badge/C++-00599C?style=flat-square&logo=cplusplus&logoColor=white)
+![MQTT](https://img.shields.io/badge/MQTT-660066?style=flat-square&logo=mqtt&logoColor=white)
+![FIWARE](https://img.shields.io/badge/FIWARE-233C68?style=flat-square)
+![AWS](https://img.shields.io/badge/AWS%20EC2-232F3E?style=flat-square&logo=amazonwebservices&logoColor=white)
+![Postman](https://img.shields.io/badge/Postman-FF6C37?style=flat-square&logo=postman&logoColor=white)
+
+<sub>Edge Computing & Computer Systems · FIAP · Engenharia de Software</sub>
+
+</div>
 
 ---
 
-## 📌 Descrição do projeto
+## Sobre o projeto
 
-O vinho é sensível a três fatores ambientais principais: **luminosidade**, **temperatura** e **umidade**. A exposição excessiva à luz degrada compostos orgânicos; variações de temperatura causam aromas indesejados; e umidade fora da faixa ideal compromete vedantes e rótulos.
+O vinho é sensível a três fatores do ambiente. O excesso de **luz** degrada compostos orgânicos, as variações de **temperatura** criam aromas indesejados e a **umidade** fora da faixa compromete rolhas e rótulos.
 
-Este sistema monitora continuamente esses três fatores e responde de forma automática, exibindo os valores em um display LCD e acionando LEDs e buzzer conforme os níveis detectados.
+Para a Vinheria Agnello, desenvolvemos um sistema que mede esses três fatores continuamente e reage sozinho: LEDs mostram o estado do ambiente, um buzzer chama atenção quando algo está errado e, na versão IoT, os dados vão para a nuvem, onde ficam disponíveis em tempo real e com histórico.
 
-> Os valores exibidos no display são a média de 5 leituras consecutivas, atualizados a cada 5 segundos.
+### Evolução do projeto
+
+| Versão | Placa | O que monitora | Novidade |
+|---|---|---|---|
+| **1. Luminosidade** | Arduino Uno | Luz | Alerta em três níveis com LEDs e buzzer |
+| **2. Ambiental** | Arduino Uno | Luz, temperatura e umidade | Display LCD e média de 5 leituras para evitar oscilações |
+| **3. IoT** | ESP32 | Luz, temperatura e umidade | Envio por Wi-Fi e MQTT para o FIWARE, com histórico e comandos remotos |
 
 ---
 
-## Faixas ideais de armazenamento
+## Faixas ideais e alertas
 
-| Fator | Faixa Ideal | Fonte |
+| Fator | Faixa ideal | Fora da faixa |
 |---|---|---|
-| Temperatura | 10°C a 15°C | Alexander Pandell, PhD — UC |
-| Umidade | 50% a 70% | Recomendação geral |
-| Luminosidade | Ambiente escuro/penumbra | — |
+| **Temperatura** | 10 °C a 15 °C | 🟡 LED amarelo, buzzer e `Temp. ALTA` ou `Temp. BAIXA` no display |
+| **Umidade** | 50% a 70% | 🔴 LED vermelho, buzzer e `Umidade ALTA` ou `Umidade BAIXA` no display |
+| **Luminosidade** | Escuro ou penumbra | Meia luz: 🟡 LED amarelo. Muito claro: 🔴 LED vermelho e buzzer |
+
+Com tudo dentro da faixa, o **LED verde** fica aceso e o buzzer, desligado.
+
+<sub>Faixa de temperatura segundo Alexander Pandell, PhD (UC). Faixa de umidade segundo recomendação geral de armazenamento.</sub>
 
 ---
 
-## 🔴 Lógica de alertas
+## Versão 1 · Luminosidade
 
-### Luminosidade
+[![Simulação no Wokwi](https://img.shields.io/badge/Wokwi-Abrir%20simula%C3%A7%C3%A3o-2E7D32?style=for-the-badge&logo=arduino&logoColor=white)](https://wokwi.com/projects/481301379218327553)
 
-| Estado | Condição | LED | Buzzer | Display |
-|---|---|---|---|---|
-| ✅ Adequado | Ambiente escuro | 🟢 Verde | Desligado | — |
-| ⚠️ Alerta | Meia luz | 🟡 Amarelo | Desligado | `Ambiente a meia luz` |
-| 🚨 Crítico | Muito claro | 🔴 Vermelho | Contínuo | `Ambiente muito claro` |
+<img src="./circuito-01.png" alt="Circuito da versão 1 no Wokwi" width="420" />
 
-### Temperatura
+O módulo LDR envia a leitura de luz para a porta `A0`. O Arduino compara o valor com dois limites e acende o LED correspondente. Como o módulo entrega valores menores quando há mais luz, o código inverte a leitura (`1023 - analogRead(A0)`) para que valores altos signifiquem ambiente claro.
 
-| Estado | Condição | LED | Buzzer | Display |
-|---|---|---|---|---|
-| ✅ OK | Entre 10°C e 15°C | 🟢 Verde | Desligado | `Temperatura OK` + valor |
-| ⚠️ Alta | Acima de 15°C | 🟡 Amarelo | Contínuo | `Temp. ALTA` + valor |
-| ⚠️ Baixa | Abaixo de 10°C | 🟡 Amarelo | Contínuo | `Temp. BAIXA` + valor |
-
-### Umidade
-
-| Estado | Condição | LED | Buzzer | Display |
-|---|---|---|---|---|
-| ✅ OK | Entre 50% e 70% | 🟢 Verde | Desligado | `Umidade OK` + valor |
-| ⚠️ Alta | Acima de 70% | 🔴 Vermelho | Contínuo | `Umidade ALTA` + valor |
-| ⚠️ Baixa | Abaixo de 50% | 🔴 Vermelho | Contínuo | `Umidade BAIXA` + valor |
-
----
-
-## Primeiro circuito (luminosidade)
-
-![Circuito do projeto no Tinkercad](./circuito-01.png)
-
-> Simulação montada no **Tinkercad**. O LDR lê a luminosidade e envia o sinal analógico à porta `A0` do Arduino, que processa e aciona os componentes conforme os limiares definidos no código.
-
-🔗 [Acessar simulação no Tinkercad](https://www.tinkercad.com/things/iGE2alnjSsO-cp-vinheria-agnello)
-
-[![Assista no YouTube](https://img.shields.io/badge/YouTube-Assistir%20Apresenta%C3%A7%C3%A3o-red?style=for-the-badge&logo=youtube)](https://youtu.be/E_VeabWIuwE?si=LpvlSQirIN8TYRqz)
-
----
-
-## Segundo circuito (ambiental)
-
-![Circuito do projeto](circuito-02.jpg)
-
-> Simulação montada no **Wokwi** (sensor DHT22 como substituto do DHT11). O LDR lê a luminosidade via porta `A0`; o DHT22 lê temperatura e umidade via pino digital; o LCD 16x2 exibe os valores via comunicação I2C ou paralela.
-
-🔗 [Acessar simulação no Wokwi](https://wokwi.com/projects/463841959926858753)
-
-[![Assista no YouTube](https://img.shields.io/badge/YouTube-Assistir%20Apresenta%C3%A7%C3%A3o-red?style=for-the-badge&logo=youtube)](https://youtu.be/M6Er3k_67Ww?si=wdpfwa03QXsFueZl)
-
----
-
-## 🛠️ Componentes utilizados
-
-### Hardware
-
-| Componente | Quantidade | Pino no Arduino |
+| Componente | Qtd. | Pino |
 |---|---|---|
 | Arduino Uno | 1 | — |
-| Sensor LDR (fotoresistor) | 1 | A0 |
-| Resistor 10 kΩ | 1 | Divisor de tensão com LDR |
-| Sensor DHT11 (ou DHT22) | 1 | D2 |
-| Display LCD 16x2 (I2C) | 1 | SDA/SCL (A4/A5) |
-| LED Verde (5 mm) | 1 | D5 |
-| LED Amarelo (5 mm) | 1 | D6 |
-| LED Vermelho (5 mm) | 1 | D7 |
-| Resistores 220 Ω | 3 | Um por LED |
-| Buzzer Passivo 5V | 1 | D3 |
-| Jumpers | ~20 | — |
-| Protoboard | 1 | 400 ou 830 pontos |
+| Módulo LDR | 1 | A0 |
+| LED verde, amarelo e vermelho + resistores 220 Ω | 3 | D5, D6, D7 |
+| Buzzer passivo 5 V | 1 | D3 |
 
-### Software
+<details>
+<summary><b>Como executar</b></summary>
 
-- **Arduino IDE** 2.x — [download](https://www.arduino.cc/en/software)
-- **Biblioteca DHT sensor library** (Adafruit) — instalável via Library Manager
-- **Biblioteca LiquidCrystal_I2C** (se usar LCD com I2C) — instalável via Library Manager
+**Wokwi:** abra a [simulação](https://wokwi.com/projects/481301379218327553), clique em **Play** e clique no sensor de luz para aumentar ou diminuir a luminosidade e testar os três estados.
+
+**Hardware:** monte o circuito na protoboard, abra `circuito-01.ino` na Arduino IDE, faça o upload e acompanhe os valores no Monitor Serial (9600 baud).
+
+</details>
 
 ---
 
-## ▶️ Como executar
+## Versão 2 · Monitoramento ambiental
 
-### **Opção A - Tinkercad**
+[![Simulação no Wokwi](https://img.shields.io/badge/Wokwi-Abrir%20simula%C3%A7%C3%A3o-2E7D32?style=for-the-badge&logo=arduino&logoColor=white)](https://wokwi.com/projects/481301287920889857)
 
-> Primeiro circuito (luminosidade)
- 
-1. Acesse [tinkercad.com](https://www.tinkercad.com) e faça login ou crie uma conta gratuita.
-2. Clique em "Criar" e selecione "Circuito".
-3. Adicione os componentes: Arduino Uno, LDR, resistor 10kΩ, LEDs (verde, amarelo e vermelho), resistores 220Ω e Buzzer.
-4. Monte as conexões conforme o esquema em `circuito-01.png`.
-5. Clique em "Código" e selecione o modo "Texto".
-6. Apague o código padrão e cole o conteúdo do arquivo `circuito-01.ino`.
-7. Clique em "Iniciar Simulação".
-8. Clique no LDR e arraste o controle de luminosidade para testar os diferentes estados.
-   
-> Segundo circuito (ambiental)
- 
-1. Acesse [tinkercad.com](https://www.tinkercad.com) e faça login ou crie uma conta gratuita.
-2. Clique em "Criar" e selecione "Circuito".
-3. Adicione os componentes: Arduino Uno, LDR, resistor 10kΩ, sensor TMP36 (substituto do DHT11 no Tinkercad), LCD 16x2, LEDs (verde, amarelo e vermelho), resistores 220Ω e Buzzer.
-4. Monte as conexões conforme o esquema em `circuito-02.jpg`.
-5. Clique em "Código" e selecione o modo "Texto".
-6. Apague o código padrão e cole o conteúdo do arquivo `circuito-02.ino`.
-7. Clique em "Iniciar Simulação".
-8. Interaja com o LDR e com o sensor de temperatura para testar os diferentes estados.
+<img src="./circuito-02.jpg" alt="Circuito da versão 2 no Wokwi" width="100%" />
 
- ---
- 
-### **Opção B - Wokwi**
- 
-> Primeiro circuito (luminosidade)
- 
-1. Acesse [wokwi.com](https://wokwi.com) e faça login ou crie uma conta gratuita.
-2. Clique em "New Project" e selecione "Arduino Uno".
-3. No painel de componentes (botão "+" à esquerda), adicione: LDR, resistor 10kΩ, LEDs (verde, amarelo e vermelho), resistores 220Ω e Buzzer.
-4. Monte as conexões conforme o esquema em `circuito-01.png`.
-5. No editor de código, apague o conteúdo padrão e cole o conteúdo do arquivo `circuito-01.ino`.
-6. Clique em Play.
-7. Clique no LDR e ajuste o controle de luminosidade para testar os diferentes estados.
-   
-> Segundo circuito (ambiental)
- 
-1. Acesse [wokwi.com](https://wokwi.com) e faça login ou crie uma conta gratuita.
-2. Clique em "New Project" e selecione "Arduino Uno".
-3. No painel de componentes (botão "+" à esquerda), adicione: LDR, resistor 10kΩ, DHT22 (substituto do DHT11), LCD 16x2 I2C, LEDs (verde, amarelo e vermelho), resistores 220Ω e Buzzer.
-4. Monte as conexões conforme o esquema em `circuito-02.jpg`.
-5. No editor de código, apague o conteúdo padrão e cole o conteúdo do arquivo `circuito-02.ino`.
-6. Clique em Play.
-7. Clique no DHT22 e ajuste temperatura e umidade; clique no LDR para ajustar a luminosidade.
+Além do módulo LDR, entra o sensor **DHT** para temperatura e umidade, e um **display LCD 16x2** mostra os valores. Para evitar alarmes falsos, o sistema usa a **média de 5 leituras** e atualiza a cada 5 segundos.
+
+| Componente | Qtd. | Pino |
+|---|---|---|
+| Arduino Uno | 1 | — |
+| Módulo LDR | 1 | A0 |
+| Sensor DHT11 (DHT22 na simulação) | 1 | D8 |
+| Display LCD 16x2 | 1 | D7, D11, D6, D5, D4, D3, D2 |
+| LED verde, amarelo e vermelho + resistores 220 Ω | 3 | D13, D12, D10 |
+| Buzzer passivo 5 V | 1 | D9 |
+
+Bibliotecas: **DHT sensor library** (Adafruit) e **LiquidCrystal**.
+
+<details>
+<summary><b>Como executar</b></summary>
+
+**Wokwi:** abra a [simulação](https://wokwi.com/projects/481301287920889857), clique em **Play** e altere os valores do DHT22 e do LDR para testar os alertas.
+
+**Hardware:** instale a **DHT sensor library** na Arduino IDE (`Sketch > Include Library > Manage Libraries`), faça o upload de `circuito-02.ino` e acompanhe no Monitor Serial (9600 baud).
+
+</details>
 
 ---
 
-### **Opção C - Hardware físico**
- 
-1. Monte o circuito na protoboard conforme o esquema em `circuito-01.png` (primeiro circuito) ou `circuito-02.jpg` (segundo circuito).
-2. Instale as bibliotecas **DHT sensor library** e **LiquidCrystal_I2C** no Arduino IDE via `Sketch > Include Library > Manage Libraries`.
-3. Abra o arquivo `circuito-01.ino` (primeiro circuito) ou `circuito-02.ino` (segundo circuito).
-4. Selecione a porta correta em `Ferramentas > Porta`.
-5. Clique em Upload (Ctrl+U).
-6. Abra o Monitor Serial (9600 baud) para acompanhar os valores em tempo real.
+## Versão 3 · IoT com FIWARE
 
----
+[![Simulação no Wokwi](https://img.shields.io/badge/Wokwi-Abrir%20simula%C3%A7%C3%A3o-2E7D32?style=for-the-badge&logo=arduino&logoColor=white)](https://wokwi.com/projects/478084578183721985)
 
-## ⚙️ Ajuste dos limiares
+<img src="./circuito-03.png" alt="Circuito da versão 3 no Wokwi" width="100%" />
 
-No arquivo `.ino`, as variáveis abaixo controlam os limites de cada estado. Ajuste conforme o ambiente real:
+O **ESP32** mantém os alertas locais e passa a enviar as leituras por **Wi-Fi e MQTT** para um servidor **FIWARE** hospedado numa EC2 da AWS. Os dados ficam disponíveis em tempo real e com histórico, e o ESP32 também recebe comandos remotos.
 
-```cpp
-// Luminosidade (valor analógico 0–1023)
-int limiteOK     = 880;  // Abaixo → ambiente escuro (LED verde)
-int limiteAlerta = 960;  // Entre os dois → meia luz (LED amarelo)
-                         // Acima → muito claro (LED vermelho + buzzer)
+### Arquitetura
 
-// Temperatura (°C)
-float tempMin = 10.0;
-float tempMax = 15.0;
-
-// Umidade (%)
-float umidMin = 50.0;
-float umidMax = 70.0;
+```
+ESP32 ──(Wi-Fi / MQTT)──► Mosquitto ──► IoT Agent MQTT ──(NGSIv2)──► Orion ──► STH-Comet (histórico)
+                                                                       ▲
+                                                    MyMQTT / Postman ──┘
 ```
 
->Use o Monitor Serial para verificar os valores brutos dos sensores no seu ambiente e calibre conforme necessário.
+- **Back-end FIWARE:** Orion Context Broker, IoT Agent MQTT, STH-Comet, MongoDB e Mosquitto, instalados com o [FIWARE Descomplicado](https://github.com/fabiocabrini/fiware).
+- **Modelo de dados:** segue o Smart Data Model [IndoorEnvironmentObserved](https://github.com/smart-data-models/dataModel.Environment/tree/master/IndoorEnvironmentObserved), com `temperature` (°C), `relativeHumidity` (0 a 1) e `illuminance`.
+- **Padrão NGSIv2:** os dados são consultados no Orion em `/v2/entities`, cada um com o horário da leitura (`TimeInstant`).
+- **Histórico:** o STH-Comet guarda todas as leituras para consulta e gráficos.
+
+### Tópicos MQTT
+
+| Tópico | Função |
+|---|---|
+| `/TEF/vinheria001/attrs/t` | Temperatura (°C) |
+| `/TEF/vinheria001/attrs/h` | Umidade (0 a 1) |
+| `/TEF/vinheria001/attrs/l` | Luminosidade (%) |
+| `/TEF/vinheria001/cmd` | Comandos: `vinheria001@on\|` liga e `vinheria001@off\|` desliga o LED da placa |
+
+### Componentes
+
+| Componente | Qtd. | Pino |
+|---|---|---|
+| ESP32 DevKit | 1 | — |
+| Sensor DHT11 (DHT22 na simulação) | 1 | GPIO 4 |
+| Módulo LDR | 1 | GPIO 34 |
+| LED verde, amarelo e vermelho + resistores 220 Ω | 3 | GPIO 25, 26, 27 |
+| Buzzer | 1 | GPIO 14 |
+
+Bibliotecas: **DHT sensor library** (Adafruit) e **PubSubClient**. App: **MyMQTT** (Android e iOS).
+
+<details>
+<summary><b>Como executar</b></summary>
+
+**1. Servidor FIWARE**
+1. Ligue o servidor na AWS com `sudo docker compose up -d`, com as portas **1026**, **4041**, **8666** e **1883** liberadas.
+2. Importe `circuito-03.postman_collection.json` no Postman e troque a variável `url` pelo IP do servidor.
+3. Rode as requisições **1 a 3** (health checks) e, uma única vez, as **4 a 6** (serviço, dispositivo e histórico).
+
+**2. ESP32**
+- **Wokwi:** abra a [simulação](https://wokwi.com/projects/478084578183721985) e clique em **Play**. O Monitor Serial mostra `Conectado!` e os valores a cada 5 segundos.
+- **Hardware:** instale o suporte ao ESP32 e as bibliotecas na Arduino IDE, troque o Wi-Fi pela sua rede 2,4 GHz e `DHT22` por `DHT11` em `circuito-03.ino`, selecione **ESP32 Dev Module** e faça o upload (Monitor Serial em 115200 baud).
+
+**3. MyMQTT**
+- Conecte no IP do servidor, porta `1883`.
+- **Leitura:** inscreva-se em `/TEF/vinheria001/attrs/#`.
+- **Comando:** publique `vinheria001@on|` em `/TEF/vinheria001/cmd` para acender o LED da placa.
+
+**4. Consultas no Postman**
+- **7:** últimos valores no Orion, com o horário de cada leitura.
+- **8 e 9:** ligam e desligam o LED da placa pelo Orion.
+- **10 a 12:** histórico de temperatura, umidade e luminosidade no STH-Comet.
+
+</details>
 
 ---
 
-## 🗂️ Estrutura do repositório
+## Ajuste dos limites
+
+Os limites de cada alerta ficam no início dos arquivos `.ino` e podem ser calibrados para o ambiente real. Use o Monitor Serial para ver os valores brutos dos sensores.
+
+```cpp
+// circuito-01.ino: luminosidade (leitura analógica de 0 a 1023)
+int limiteOK     = 880;  // abaixo: ambiente escuro
+int limiteAlerta = 960;  // entre os dois: meia luz / acima: muito claro
+
+// circuito-02.ino e circuito-03.ino: temperatura (°C) e umidade (%)
+const int TEMP_MIN = 10;
+const int TEMP_MAX = 15;
+const int UMID_MIN = 50;
+const int UMID_MAX = 70;
+```
+
+---
+
+## Estrutura
 
 ```
 Vinheria-Agnello/
-├── circuito-01 ← Código-fonte do sistema luminosidade (primiero circuito)
-├── circuito-02 ← Código-fonte do sistema ambiental (segundo circuito)
-├── circuito-01.png ← Imagem do circuito luminosidade
-├── circuito-02.jpg ← Imagem do circuito ambiental
-└── README.md ← Este arquivo
+├── circuito-01.ino                       # Versão 1: luminosidade
+├── circuito-01.png
+├── circuito-02.ino                       # Versão 2: luminosidade, temperatura e umidade com LCD
+├── circuito-02.jpg
+├── circuito-03.ino                       # Versão 3: ESP32 com Wi-Fi e MQTT
+├── circuito-03.png
+├── circuito-03.postman_collection.json   # Requisições do FIWARE
+└── README.md
 ```
 
 ---
 
-## 👩‍💻 Equipe
+## Equipe
 
-| Integrante | RM |
+| Nome | RM |
 |---|---|
-| Guilherme Tome Nogueira | 570144 |
+| Eric Kang | 572575 |
+| Guilherme Tomé Nogueira | 570144 |
 | Lucas de Andrade Astorini | 569119 |
 | Sabrina Lopes da Silva | 571870 |
 | Sofia Satomi Hagio | 569120 |
