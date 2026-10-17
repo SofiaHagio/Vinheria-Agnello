@@ -53,7 +53,7 @@ Este sistema monitora continuamente esses três fatores e responde de forma auto
 
 ---
 
-## 1️⃣ Primeiro circuito (luminosidade)
+## Primeiro circuito (luminosidade)
 
 ![Circuito do projeto no Tinkercad](./circuito-01.png)
 
@@ -108,7 +108,7 @@ Este sistema monitora continuamente esses três fatores e responde de forma auto
 
 ---
 
-## 2️⃣ Segundo circuito (ambiental)
+## Segundo circuito (ambiental)
 
 ![Circuito do projeto](circuito-02.jpg)
 
@@ -168,11 +168,25 @@ Bibliotecas: **DHT sensor library** (Adafruit) e **LiquidCrystal**.
 
 ---
 
-## 3️⃣ Terceiro circuito (IoT)
+## Terceiro circuito (IoT)
 
 ![Circuito do projeto](circuito-03.png)
 
-> Simulação montada no **Wokwi** (sensor DHT22 como substituto do DHT11). O ESP32 lê o LDR e o DHT22, mantém os alertas com LEDs e buzzer e envia os dados via **MQTT** para o servidor **FIWARE** na AWS. Pelo app **MyMQTT** é possível ler os dados e enviar comandos para o ESP32.
+> Simulação montada no **Wokwi** (sensor DHT22 como substituto do DHT11). O ESP32 lê o LDR e o DHT22, mantém os alertas com LEDs e buzzer e envia os dados via **Wi-Fi** e **MQTT** para o servidor **FIWARE** na AWS. Pelo app **MyMQTT** é possível ler os dados e enviar comandos para o ESP32.
+
+### Arquitetura
+
+```
+ESP32 --(Wi-Fi / MQTT)--> Mosquitto --> IoT Agent MQTT --(NGSIv2)--> Orion --> STH-Comet (histórico)
+                                                                          ^
+                                                     MyMQTT / Postman ----+
+```
+
+- **FIWARE (back-end):** Orion Context Broker, IoT Agent MQTT, STH-Comet, MongoDB e Mosquitto, instalados com o [FIWARE Descomplicado](https://github.com/fabiocabrini/fiware) em uma EC2 na AWS.
+- **Smart Data Models:** os dados seguem o modelo europeu [IndoorEnvironmentObserved](https://github.com/smart-data-models/dataModel.Environment/tree/master/IndoorEnvironmentObserved), com os atributos `temperature` (°C), `relativeHumidity` (0 a 1) e `illuminance`.
+- **NGSI:** os dados são acessados pelo Orion no padrão **NGSIv2** (`/v2/entities`).
+- **Time stamp:** cada leitura recebe o horário em que foi registrada (`TimeInstant`).
+- **Histórico:** o STH-Comet armazena todas as leituras para consulta e geração de gráficos.
 
 🔗 [Acessar simulação no Wokwi](https://wokwi.com/projects/478084578183721985)
 
@@ -196,18 +210,23 @@ Bibliotecas: **DHT sensor library** (Adafruit) e **PubSubClient**. App: **MyMQTT
 | Tópico | Função |
 |---|---|
 | `/TEF/vinheria001/attrs/t` | Envia a temperatura (°C) |
-| `/TEF/vinheria001/attrs/h` | Envia a umidade (%) |
+| `/TEF/vinheria001/attrs/h` | Envia a umidade (0 a 1) |
 | `/TEF/vinheria001/attrs/l` | Envia a luminosidade (%) |
 | `/TEF/vinheria001/cmd` | Recebe comandos: `vinheria001@on\|` liga e `vinheria001@off\|` desliga o LED da placa |
 
 ### Como executar
 
+**Servidor FIWARE (Postman)**
+
+1. Ligue o servidor FIWARE na AWS (`sudo docker compose up -d`) com as portas **1026**, **4041**, **8666** e **1883** liberadas.
+2. Importe no Postman o arquivo `circuito-03.postman_collection.json` e troque a variável `url` pelo IP do servidor.
+3. Execute as requisições **1 a 3** (health checks) e depois, uma única vez, as requisições **4 a 6** (cadastro do serviço, do dispositivo e do histórico).
+
 **Wokwi**
 
-1. Ligue o servidor FIWARE na AWS (`sudo docker compose up -d`) com a porta **1883** liberada.
-2. Acesse a [simulação no Wokwi](https://wokwi.com/projects/478084578183721985) e clique em Play.
-3. No Monitor Serial deve aparecer `Conectado!` e os valores a cada 5 segundos.
-4. Clique no DHT22 ou no LDR para alterar os valores e testar os alertas.
+1. Com o servidor configurado, acesse a [simulação no Wokwi](https://wokwi.com/projects/478084578183721985) e clique em Play.
+2. No Monitor Serial deve aparecer `Conectado!` e os valores a cada 5 segundos.
+3. Clique no DHT22 ou no LDR para alterar os valores e testar os alertas.
 
 **Hardware físico**
 
@@ -222,6 +241,12 @@ Bibliotecas: **DHT sensor library** (Adafruit) e **PubSubClient**. App: **MyMQTT
 1. No app, conecte no IP do servidor FIWARE, porta `1883`.
 2. **Leitura:** inscreva-se em `/TEF/vinheria001/attrs/#` para ver os dados chegando.
 3. **Escrita:** publique `vinheria001@on|` em `/TEF/vinheria001/cmd` para acender o LED da placa (`vinheria001@off|` apaga).
+
+**Consultando os dados (Postman)**
+
+- **7.** Mostra os últimos valores no Orion (NGSI), com o time stamp de cada leitura.
+- **8 e 9.** Ligam e desligam o LED da placa pelo Orion.
+- **10 a 12.** Mostram o histórico de temperatura, umidade e luminosidade no STH-Comet.
 
 ---
 
@@ -258,6 +283,7 @@ Vinheria-Agnello/
 ├── circuito-02.jpg ← Imagem do segundo circuito
 ├── circuito-03.ino ← Código-fonte do terceiro circuito
 ├── circuito-03.png ← Imagem do terceiro circuito
+├── circuito-03.postman_collection.json ← Requisições do FIWARE do terceiro circuito
 └── README.md ← Este arquivo
 ```
 
