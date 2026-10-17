@@ -107,7 +107,7 @@ void loop() {
 
     // Envio MQTT
     mqtt.publish(TOPICO_TEMP, String(temp, 1).c_str());
-    mqtt.publish(TOPICO_UMID, String(umid, 0).c_str());
+    mqtt.publish(TOPICO_UMID, String(umid / 100, 2).c_str());
     mqtt.publish(TOPICO_LUZ,  String(luz).c_str());
   }
 }
